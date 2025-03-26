@@ -13,6 +13,18 @@ def parseFloat (s : String) : Option Float :=
     | _ => none
   | _ => none
 
+-- Function to format a Float by removing trailing zeros
+def formatFloat (f : Float) : String :=
+  let s := f.toString
+  if s.contains '.' then
+    let charList := s.toList
+    let reversed := charList.reverse
+    let dropped := reversed.dropWhile (λ c => c = '0')
+    let trimmedList := dropped.reverse
+    let trimmed := String.mk trimmedList
+    if trimmed.endsWith "." then trimmed.dropRight 1 else trimmed
+  else s
+
 -- Function to process .vm files
 def processVMFile (filePath : System.FilePath) (outputFile : System.FilePath) : IO (Float × Float) := do
   let content ← IO.FS.readFile filePath
@@ -30,7 +42,7 @@ def processVMFile (filePath : System.FilePath) (outputFile : System.FilePath) : 
       | (some amount, some price) =>
         let total := (Float.ofInt amount) * price
         totalBuy := totalBuy + total
-        outputLines := outputLines ++ [s!"### BUY {productName} ###", s!"{total}"]
+        outputLines := outputLines ++ [s!"### BUY {productName} ###", s!"{formatFloat total}"]
       | _ => IO.println s!"Error: Invalid buy entry in line: {line}"
 
     | "cell" :: productName :: amountStr :: priceStr :: _ =>
@@ -38,7 +50,7 @@ def processVMFile (filePath : System.FilePath) (outputFile : System.FilePath) : 
       | (some amount, some price) =>
         let total := (Float.ofInt amount) * price
         totalCell := totalCell + total
-        outputLines := outputLines ++ [s!"$$$ CELL {productName} $$$", s!"{total}"]
+        outputLines := outputLines ++ [s!"$$$ CELL {productName} $$$", s!"{formatFloat total}"]
       | _ => IO.println s!"Error: Invalid sell entry in line: {line}"
     | _ => pure ()  -- Do nothing if the line doesn't match the pattern
 
@@ -51,6 +63,8 @@ def processVMFile (filePath : System.FilePath) (outputFile : System.FilePath) : 
 -- Function to write VM files to an .asm file
 def writeVMFilesToTar (dirPath : System.FilePath) : IO Unit := do
   let outputFile := dirPath / "Tar0.asm"
+  IO.FS.writeFile outputFile "" -- Create file if it doesn't exist
+  IO.println s!"Writing to {outputFile}..."
   let files ← System.FilePath.readDir dirPath
   let vmFiles := files.filter (·.path.extension == some "vm")  -- Filter .vm files
 
@@ -66,13 +80,15 @@ def writeVMFilesToTar (dirPath : System.FilePath) : IO Unit := do
     totalBuySum := totalBuySum + totalBuy
     totalCellSum := totalCellSum + totalCell
 
-
   -- Append totals
   let existing ← IO.FS.readFile outputFile
-  let finalOutput := existing ++ s!"TOTAL BUY: {totalBuySum}\nTOTAL CELL: {totalCellSum}\n"
+  let finalOutput := existing ++ s!"TOTAL BUY: {formatFloat totalBuySum}\nTOTAL CELL: {formatFloat totalCellSum}\n"
   IO.FS.writeFile outputFile finalOutput
 
   IO.println "Completed processing all .vm files."
 
--- Example usage:
-#eval writeVMFilesToTar "./tar0"
+def main : IO Unit := do
+  (←IO.getStdout).putStrLn "Enter directory path:"
+  let dirPath ← (←IO.getStdin).getLine
+  let name := dirPath.dropRightWhile Char.isWhitespace
+  writeVMFilesToTar name

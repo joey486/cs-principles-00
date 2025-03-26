@@ -1,12 +1,12 @@
 InputA
 $$$ CELL bread $$$
-13.500000
+13.5
 ### BUY cheese ###
-10.600000
+10.6
 InputB
 ### BUY chocolate ###
-12.500000
+12.5
 $$$ CELL eggs $$$
-621.000000
-TOTAL BUY: 23.100000
-TOTAL CELL: 634.500000
+621
+TOTAL BUY: 23.1
+TOTAL CELL: 634.5
